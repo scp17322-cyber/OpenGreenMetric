@@ -37,7 +37,7 @@ geo = ["geopandas>=0.14", "shapely>=2.0"]
 api = ["fastapi>=0.109", "uvicorn>=0.27", "pydantic>=2.5"]
 dashboard = ["streamlit>=1.30"]
 notebooks = ["jupyter>=1.0", "nbconvert>=7.0"]
-test = ["pytest>=8.0", "httpx>=0.27"]
+test = ["pytest>=8.0", "httpx>=0.27", "openmetric[api]"]
 all = [
     "openmetric[ml,viz,geo,api,dashboard,notebooks,test]",
 ]
