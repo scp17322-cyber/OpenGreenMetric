@@ -1,18 +1,28 @@
-# OpenGreenMetric
+<p align="center">
+  <img src="assets/banner.svg" width="750" />
+</p>
 
-Product-level life cycle assessment from free-text descriptions.
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/matplotlib-3.8+-orange?style=flat-square" />
+  <img src="https://img.shields.io/badge/scikit--learn-1.4+-green?style=flat-square" />
+  <img src="https://img.shields.io/badge/FastAPI-0.109+-teal?style=flat-square" />
+  <img src="https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square" />
+</p>
 
 ## What This Is
 
 I built this to answer a straightforward question: given nothing but a product description (say, "organic cotton t-shirt, 180g, made in Bangladesh"), can you estimate its environmental footprint from first principles?
 
-It turns out you can. The engine classifies the product into one of 44 NAICS categories, looks up emission factors from six public databases, and runs a cradle-to-grave impact calculation covering CO$_2$e, water, energy, and fossil resource depletion. Everything gets normalized into a single 0-to-100 score with a letter grade. The whole pipeline is deterministic, reproducible, and runs in under 200ms.
+It turns out you can. The engine classifies the product into one of 44 NAICS categories, looks up emission factors from six public databases, and runs a cradle-to-grave impact calculation covering $\text{CO}_2\text{e}$, water, energy, and fossil resource depletion. Everything gets normalized into a single 0-to-100 score with a letter grade. The whole pipeline is deterministic, reproducible, and runs in under 200ms.
 
 The data science layer on top handles uncertainty quantification (Monte Carlo), sensitivity analysis (OAT), clustering, regression, and geospatial visualization. Every figure and animation in this repo is generated from the same codebase.
 
-<p align="center">
-  <img src="animations/gif_waterfall.gif" width="750" />
-</p>
+## Relationship to GreenMetric.AI
+
+This repo is the open-source foundation behind [GreenMetric.AI](https://greenmetric.ai), a fully functional SaaS product that provides environmental scoring as an API for e-commerce platforms. GreenMetric.AI has been live since early 2026 and serves around 20 users, handling real product assessments for EU Digital Product Passport compliance and sustainability reporting.
+
+OpenGreenMetric contains the core LCA engine, scoring logic, and the full data science analysis pipeline. The production API adds authentication, caching, webhook integrations, and embeddable widgets on top of this same `analyze()` function. If you are evaluating the technical work behind GreenMetric.AI, this is the codebase to look at.
 
 ## Quick Start
 
@@ -78,7 +88,7 @@ where $a(i)$ is the mean intra-cluster distance and $b(i)$ is the mean nearest-c
 
 ### Regression
 
-Price-to-CO$_2$e relationship is fit with OLS:
+Price-to-$\text{CO}_2\text{e}$ relationship is fit with OLS:
 
 $$\hat{y} = \beta_0 + \beta_1 x + \varepsilon, \qquad \varepsilon \sim \mathcal{N}(0, \sigma^2)$$
 
@@ -92,12 +102,12 @@ Feature importance is estimated via a Random Forest (100 trees, max depth 5) wit
 | Water weight | 22.46% | Inverse-variance derived |
 | Fossils weight | 21.96% | Inverse-variance derived |
 | Primary Energy Factor | 6.48 MJ/kWh | $3.6 \times 1.8$ |
-| Sea freight factor | 0.016 kg CO$_2$e/tonne-km | DEFRA 2024 container |
-| Road freight factor | 0.107 kg CO$_2$e/tonne-km | DEFRA 2024 HGV |
-| Clothing emission factor | 2.5 kg CO$_2$e/kg | Generic fallback |
-| Electronics emission factor | 5.0 kg CO$_2$e/kg | Generic fallback |
-| Furniture emission factor | 3.5 kg CO$_2$e/kg | Generic fallback |
-| Appliances emission factor | 4.0 kg CO$_2$e/kg | Generic fallback |
+| Sea freight factor | 0.016 kg $\text{CO}_2\text{e}$/tonne-km | DEFRA 2024 container |
+| Road freight factor | 0.107 kg $\text{CO}_2\text{e}$/tonne-km | DEFRA 2024 HGV |
+| Clothing emission factor | 2.5 kg $\text{CO}_2\text{e}$/kg | Generic fallback |
+| Electronics emission factor | 5.0 kg $\text{CO}_2\text{e}$/kg | Generic fallback |
+| Furniture emission factor | 3.5 kg $\text{CO}_2\text{e}$/kg | Generic fallback |
+| Appliances emission factor | 4.0 kg $\text{CO}_2\text{e}$/kg | Generic fallback |
 | Monte Carlo RSD (textiles) | 30% | $\sigma = 0.294$ |
 
 ## Animations
@@ -118,7 +128,7 @@ K-means iteration on PCA-projected product data ($k = 4$). Each frame is one E-M
 
 <p align="center"><img src="animations/gif_tornado.gif" width="750" /></p>
 
-One-at-a-time perturbation of 8 input parameters by $\pm 20\%$ (or categorical swap for materials and origin). Bars grow left/right from the base case of 7.5 kg CO$_2$e. The final frame shows the total swing and identifies the most sensitive parameter, which is almost always the material emission factor.
+One-at-a-time perturbation of 8 input parameters by $\pm 20\%$ (or categorical swap for materials and origin). Bars grow left/right from the base case of 7.5 kg $\text{CO}_2\text{e}$. The final frame shows the total swing and identifies the most sensitive parameter, which is almost always the material emission factor.
 
 ### Score Decomposition (Waterfall)
 
@@ -136,19 +146,19 @@ Radar chart cycling through four materials (cotton, organic cotton, recycled pol
 
 <p align="center"><img src="animations/gif_world_map.gif" width="750" /></p>
 
-Countries appear one at a time, sorted from highest to lowest grid carbon intensity (kg CO$_2$e/kWh). A dashed line marks the global average. The color gradient (red to green) makes it immediately clear which grids are clean and which are coal-heavy. The PEF annotation ($6.48$ MJ/kWh) links grid intensity to fossil resource depletion.
+Countries appear one at a time, sorted from highest to lowest grid carbon intensity (kg $\text{CO}_2\text{e}$/kWh). A dashed line marks the global average. The color gradient (red to green) makes it immediately clear which grids are clean and which are coal-heavy. The PEF annotation ($6.48$ MJ/kWh) links grid intensity to fossil resource depletion.
 
 ### Supply Chain Sankey
 
 <p align="center"><img src="animations/gif_sankey.gif" width="750" /></p>
 
-Carbon flow through the five lifecycle stages of a cotton t-shirt (total: 6.3 kg CO$_2$e). Raw materials account for roughly half, manufacturing about 29%, and the three transport/use/EOL stages split the remainder. Emission factors for cotton (2.5 kg CO$_2$e/kg), sea freight (0.016 kg CO$_2$e/tonne-km), and road freight (0.107 kg CO$_2$e/tonne-km) are annotated.
+Carbon flow through the five lifecycle stages of a cotton t-shirt (total: 6.3 kg $\text{CO}_2\text{e}$). Raw materials account for roughly half, manufacturing about 29%, and the three transport/use/EOL stages split the remainder. Emission factors for cotton (2.5 kg $\text{CO}_2\text{e}$/kg), sea freight (0.016 kg $\text{CO}_2\text{e}$/tonne-km), and road freight (0.107 kg $\text{CO}_2\text{e}$/tonne-km) are annotated.
 
 ### Lifecycle Stage Comparison
 
 <p align="center"><img src="animations/gif_lifecycle.gif" width="750" /></p>
 
-Stacked bar chart building up four products (smartphone, t-shirt, chair, laptop) across five lifecycle stages. Electronics are dominated by the use phase (charging over a multi-year lifespan), while clothing is dominated by raw materials. The generic emission factors (electronics: 5.0, clothing: 2.5, furniture: 3.5 kg CO$_2$e/kg) are shown for reference.
+Stacked bar chart building up four products (smartphone, t-shirt, chair, laptop) across five lifecycle stages. Electronics are dominated by the use phase (charging over a multi-year lifespan), while clothing is dominated by raw materials. The generic emission factors (electronics: 5.0, clothing: 2.5, furniture: 3.5 kg $\text{CO}_2\text{e}$/kg) are shown for reference.
 
 ## Figures
 

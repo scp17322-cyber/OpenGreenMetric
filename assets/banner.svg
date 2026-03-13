@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="200" viewBox="0 0 900 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0A0A0A"/>
+      <stop offset="100%" style="stop-color:#111111"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10B981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="200" rx="12" fill="url(#bg)"/>
+  <rect x="0" y="192" width="900" height="8" rx="0" fill="url(#accent)" opacity="0.6"/>
+  <!-- Leaf icon -->
+  <text x="240" y="118" font-family="Arial, Helvetica, sans-serif" font-size="52" fill="#10B981" text-anchor="end">&#x2618;</text>
+  <!-- "Open" in white -->
+  <text x="252" y="118" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="700" fill="#FFFFFF" letter-spacing="-1" text-anchor="start">Open</text>
+  <!-- "GreenMetric" in green -->
+  <text x="408" y="118" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="700" fill="#10B981" letter-spacing="-1" text-anchor="start">GreenMetric</text>
+  <!-- Subtitle -->
+  <text x="450" y="152" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#888888" text-anchor="middle">Open-source life cycle assessment engine</text>
+</svg>
