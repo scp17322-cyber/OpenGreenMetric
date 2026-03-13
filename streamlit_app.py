@@ -2,6 +2,7 @@
 
 import streamlit as st
 import plotly.graph_objects as go
+import base64
 import os
 import sys
 
@@ -10,11 +11,23 @@ sys.path.insert(0, os.path.dirname(__file__))
 from openmetric import analyze
 
 # ---------------------------------------------------------------------------
+# Load logos as base64 for inline HTML
+# ---------------------------------------------------------------------------
+_DIR = os.path.dirname(__file__)
+
+def _b64(path: str) -> str:
+    with open(os.path.join(_DIR, path), "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+_LOGO_B64 = _b64("assets/logo.png")
+_GM_LOGO_B64 = _b64("assets/greenmetric-logo.png")
+
+# ---------------------------------------------------------------------------
 # Page config
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="OpenGreenMetric",
-    page_icon="https://raw.githubusercontent.com/alanknguyen/OpenGreenMetric/main/assets/favicon.png",
+    page_icon="assets/logo.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -202,9 +215,9 @@ hr { border-color: #1C1C1F !important; }
 # ---------------------------------------------------------------------------
 # Navbar
 # ---------------------------------------------------------------------------
-st.markdown("""
+st.markdown(f"""
 <div class="navbar">
-    <div class="logo">&#x2618; Open<span>GreenMetric</span></div>
+    <div class="logo"><img src="data:image/png;base64,{_LOGO_B64}" style="height: 28px; vertical-align: middle; margin-right: 8px;" />Open<span>GreenMetric</span></div>
     <div class="nav-links">
         <a href="https://greenmetric.ai" target="_blank">Production API</a>
         <a href="https://github.com/alanknguyen/OpenGreenMetric" target="_blank">GitHub</a>
@@ -262,9 +275,9 @@ result = st.session_state.result
 
 if not result:
     # Empty state
-    st.markdown("""
+    st.markdown(f"""
     <div style="text-align: center; padding: 4rem 0; color: #3F3F46;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">&#x1F331;</div>
+        <img src="data:image/png;base64,{_LOGO_B64}" style="height: 64px; opacity: 0.4; margin-bottom: 1rem;" />
         <div style="font-size: 1.1rem; font-weight: 500;">Enter a product description and click Analyze</div>
         <div style="font-size: 0.85rem; margin-top: 0.5rem;">
             Try: laptop 2.1kg made in China, recycled polyester jacket 350g, wooden dining chair 8kg
@@ -369,50 +382,54 @@ with col_radar:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-# Percentile bars
+# Percentile bars (Plotly — renders reliably)
 with col_pct:
     st.markdown('<div class="section-title">Category Percentiles</div>', unsafe_allow_html=True)
 
-    pct_data = [
-        ("Climate", p.climate, "#10B981"),
-        ("Water", p.water, "#3B82F6"),
-        ("Energy", p.energy, "#F59E0B"),
-    ]
-    pct_html = ""
-    for label, val, color in pct_data:
-        pct_html += f"""
-        <div class="pct-row">
-            <div class="pct-label">{label}</div>
-            <div class="pct-bar-wrap">
-                <div class="bar-outer">
-                    <div class="bar-fill" style="width: {val}%; background: {color};"></div>
-                </div>
-            </div>
-            <div class="pct-val" style="color: {color};">{val}%</div>
-        </div>
-        """
+    pct_labels = ["Energy", "Water", "Climate"]
+    pct_vals = [p.energy, p.water, p.climate]
+    pct_colors = ["#F59E0B", "#3B82F6", "#10B981"]
 
-    # Sub-score values
-    sub_data = [
-        ("Climate Score", f"{result.scores.climate}/100", "#10B981"),
-        ("Water Score", f"{result.scores.water}/100", "#3B82F6"),
-        ("Fossil Score", f"{result.scores.resource_use_fossils}/100", "#F59E0B"),
-    ]
-    sub_html = ""
-    for label, val, color in sub_data:
-        sub_html += f"""
-        <div class="d-row">
-            <span class="d-key">{label}</span>
-            <span class="d-val" style="color: {color};">{val}</span>
-        </div>
-        """
+    fig_pct = go.Figure()
+    # Background track bars (100% width, gray)
+    fig_pct.add_trace(go.Bar(
+        x=[100, 100, 100], y=pct_labels, orientation="h",
+        marker_color="#1C1C1F", marker_line_width=0,
+        showlegend=False, hoverinfo="skip",
+    ))
+    # Actual value bars
+    fig_pct.add_trace(go.Bar(
+        x=pct_vals, y=pct_labels, orientation="h",
+        marker_color=pct_colors, marker_line_width=0,
+        text=[f"{v}%" for v in pct_vals],
+        textposition="inside", textfont=dict(color="#FAFAFA", size=14, family="Inter"),
+        showlegend=False,
+    ))
+    fig_pct.update_layout(
+        barmode="overlay",
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(range=[0, 100], visible=False),
+        yaxis=dict(tickfont=dict(color="#A1A1AA", size=13, family="Inter"), autorange="reversed"),
+        margin=dict(l=70, r=15, t=10, b=10),
+        height=160, bargap=0.35,
+    )
+    st.plotly_chart(fig_pct, use_container_width=True)
 
+    # Sub-scores — inline styles only (no class refs)
     st.markdown(f"""
-    <div class="card">
-        {pct_html}
-    </div>
-    <div class="card">
-        {sub_html}
+    <div style="background: #111113; border: 1px solid #1C1C1F; border-radius: 16px; padding: 1.25rem 1.5rem;">
+        <div style="display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid #18181B;">
+            <span style="color: #71717A; font-size: 0.9rem;">Climate Score</span>
+            <span style="color: #10B981; font-size: 0.9rem; font-weight: 700;">{result.scores.climate}/100</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid #18181B;">
+            <span style="color: #71717A; font-size: 0.9rem;">Water Score</span>
+            <span style="color: #3B82F6; font-size: 0.9rem; font-weight: 700;">{result.scores.water}/100</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 0.6rem 0;">
+            <span style="color: #71717A; font-size: 0.9rem;">Fossil Score</span>
+            <span style="color: #F59E0B; font-size: 0.9rem; font-weight: 700;">{result.scores.resource_use_fossils}/100</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -498,12 +515,17 @@ if result.validation.warnings:
 # ---------------------------------------------------------------------------
 # Footer
 # ---------------------------------------------------------------------------
-st.markdown("""
+st.markdown(f"""
 <div class="ft">
-    <div class="ft-brand">Open<span>GreenMetric</span></div>
+    <div class="ft-brand"><img src="data:image/png;base64,{_LOGO_B64}" style="height: 22px; vertical-align: middle; margin-right: 6px;" />Open<span>GreenMetric</span></div>
     <div class="ft-meta">
         MIT License &nbsp;&middot;&nbsp; Data: EPA, DEFRA/BEIS, IPCC AR6, EU EF 3.1
-        &nbsp;&middot;&nbsp; Production API: <a href="https://greenmetric.ai" target="_blank">greenmetric.ai</a>
+    </div>
+    <div style="margin-top: 0.75rem;">
+        <a href="https://greenmetric.ai" target="_blank" style="text-decoration: none; color: #71717A; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px;">
+            <img src="data:image/png;base64,{_GM_LOGO_B64}" style="height: 20px; border-radius: 4px;" />
+            Production API: greenmetric.ai
+        </a>
     </div>
 </div>
 """, unsafe_allow_html=True)
