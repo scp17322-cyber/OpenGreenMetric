@@ -224,6 +224,54 @@ streamlit run streamlit_app.py
 
 The dashboard uses the same `analyze()` function under the hood. The production version of this project is deployed at [greenmetric.ai](https://greenmetric.ai).
 
+## Data Science Techniques
+
+The analysis layer applies standard statistical and machine learning methods to the LCA outputs. Here is what each technique does and the math behind it.
+
+| Technique | Module | What It Does |
+|---|---|---|
+| **Gaussian KDE** | `analysis/eda.py` | Estimates continuous probability densities from the discrete impact samples. Uses `scipy.stats.gaussian_kde` with automatic bandwidth selection (Scott's rule). The kernel is a standard normal centered on each data point, evaluated over 200 linearly spaced values. |
+| **Pearson Correlation** | `analysis/eda.py` | Computes pairwise linear correlation $r_{xy} = \frac{\sum (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum(x_i - \bar{x})^2 \sum(y_i - \bar{y})^2}}$ across all impact metrics. Each pair is tested with `scipy.stats.pearsonr` for significance: $^{**}$ if $p < 0.01$, $^{*}$ if $p < 0.05$. |
+| **Tukey IQR Fences** | `analysis/eda.py` | Flags outliers using $\text{threshold} = Q_3 + 1.5 \times \text{IQR}$ where $\text{IQR} = Q_3 - Q_1$. This is the classical Tukey fence; anything above the threshold is counted as an outlier per category. |
+| **K-Means Clustering** | `analysis/clustering.py` | Lloyd's algorithm with `n_init=10` random restarts and seed 42. Clusters product categories in 5D impact space (standardized via `StandardScaler`). Optimal $k$ is chosen by maximizing the silhouette score $s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}$ over $k \in [2, 10]$. |
+| **PCA** | `analysis/clustering.py` | Eigendecomposition of the covariance matrix after z-score normalization. Retains up to 5 components; the explained variance plot marks 80% and 95% cumulative thresholds. Cluster centroids are projected into the first two PCs for the scatter plot. |
+| **t-SNE** | `analysis/clustering.py` | Barnes-Hut approximation with perplexity $= \min(15, n-1)$ and 1,000 iterations. Preserves local neighborhood structure in 2D. Points are colored by their K-means labels; the silhouette score is annotated to show how well the nonlinear embedding respects cluster assignments. |
+| **OLS Regression** | `analysis/regression.py` | Fits $\hat{y} = \beta_0 + \beta_1 x$ via `sklearn.linear_model.LinearRegression`. The 95% prediction interval uses $\hat{y} \pm t_{0.025} \cdot s_e \sqrt{1 + \frac{1}{n} + \frac{(x - \bar{x})^2}{S_{xx}}}$ with $s_e^2 = \frac{\sum(y_i - \hat{y}_i)^2}{n - 2}$ and $t \approx 2.02$. |
+| **Random Forest** | `analysis/regression.py` | 100 trees, max depth 5, seed 42. Feature importance is estimated via `permutation_importance` with 20 repeats: for each feature, the model's $R^2$ is measured after randomly shuffling that feature's values. The drop in $R^2$ is the importance. Cross-validated with $k = \min(5, n)$ folds. |
+| **Lognormal Monte Carlo** | `analysis/uncertainty.py` | Draws $n = 10{,}000$ samples from $X \sim \text{LogNormal}(\mu, \sigma)$ where $\sigma = \sqrt{\ln(1 + \text{RSD}^2)}$ and $\mu = \ln(c) - \sigma^2/2$. Percentiles $P_5$ through $P_{95}$ are computed directly from the empirical distribution. Seed 42 via `numpy.random.default_rng`. |
+| **Bootstrap CI** | `analysis/uncertainty.py` | 5,000 bootstrap resamples (sampling with replacement from the Monte Carlo draws). The 90% CI at each resample size is the $[5^{\text{th}}, 95^{\text{th}}]$ percentile of the bootstrap means. CI width is plotted against a theoretical $1/\sqrt{n}$ decay curve to verify convergence. |
+| **OAT Sensitivity** | `analysis/sensitivity.py` | Perturbs each input parameter by $\pm 20\%$ (continuous) or swaps category (material, origin). The absolute delta $\Delta = f(x + \delta) - f(x_0)$ and percentage change $\Delta / f(x_0) \times 100$ are computed for each parameter. Results are sorted by $|\Delta|$ descending for the tornado chart. |
+| **Geospatial Mapping** | `analysis/geospatial.py` | Grid carbon intensities (kg $\text{CO}_2\text{e}$/kWh) are loaded from EPA data and mapped with `RdYlGn_r` (red = dirty, green = clean). Sea freight emissions per route are estimated as $\text{distance (km)} \times 0.016 / 1000$ using the DEFRA 2024 container freight factor. |
+
+## Notebooks
+
+The `notebooks/` directory has five Jupyter walkthroughs that mirror the analysis modules. Each notebook is self-contained: load the data, run the analysis, and produce the figures inline. They are meant to be read top-to-bottom as a narrative.
+
+| Notebook | What It Covers |
+|---|---|
+| `01_data_exploration.ipynb` | Loading the benchmark dataset, plotting distributions, computing correlation matrices, and flagging outliers with Tukey fences. |
+| `02_clustering_analysis.ipynb` | Silhouette sweep for optimal $k$, PCA explained variance, K-means cluster assignments, and t-SNE 2D embedding. |
+| `03_regression_models.ipynb` | Price vs. $\text{CO}_2\text{e}$ linear fit with prediction intervals, Random Forest feature importance, and cross-validated $R^2$. |
+| `04_uncertainty_analysis.ipynb` | Lognormal Monte Carlo sampling (10k draws), percentile tables, bootstrap CI convergence, and OAT sensitivity tornado. |
+| `05_geospatial_analysis.ipynb` | Country-level grid intensities, supply chain freight routes, and per-route emission estimates. |
+
+## Datasets
+
+All emission factor data lives in `data/` as JSON files. These are public-domain or openly licensed factors compiled from government and academic sources.
+
+| File | What It Contains |
+|---|---|
+| `product-category-benchmarks.json` | 40+ product categories with benchmark ranges for $\text{CO}_2\text{e}$, water, energy, price, weight, and lifespan. |
+| `defra-conversion-factors.json` | Material-level emission factors (kg $\text{CO}_2\text{e}$/kg) for 61 materials, from DEFRA/BEIS 2024. |
+| `epa-ghg-emission-factors.json` | Grid carbon intensities for 60+ countries and US regions (kg $\text{CO}_2\text{e}$/kWh). |
+| `epa-supply-chain-factors.json` | Spend-based sector intensities (kg $\text{CO}_2\text{e}$/USD) for 86 NAICS codes. |
+| `emission-factor-uncertainties.json` | Relative standard deviations (RSD) per factor, used to parameterize Monte Carlo sampling. |
+| `emission-profiles.json` | Lifecycle emission profiles broken down by material and product type. |
+| `ef31-characterization-factors.json` | EU EF 3.1 midpoint characterization factors for 16 impact categories. |
+| `ef31-normalization-weighting.json` | EF 3.1 normalization references and weighting set. |
+| `lifecycle-templates.json` | Use-phase and end-of-life templates for 36 product archetypes. |
+| `gwp100-factors.json` | IPCC AR6 100-year Global Warming Potentials for 30 greenhouse gases. |
+
 ## Data Sources
 
 This project pulls emission factors from six public databases: **EPA Supply Chain EEIO v1.3** (86 NAICS sectors), **UK DEFRA/BEIS 2024** (61 materials, 8 transport modes), **EPA GHG Emission Factors Hub** (60+ electricity grids), **IPCC AR6 GWP100** (100-year global warming potentials), **EU EF 3.1** (16 impact categories), and a set of compiled lifecycle templates for use-phase and end-of-life modeling.
